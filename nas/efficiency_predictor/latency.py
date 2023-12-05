@@ -1,4 +1,7 @@
+import time
+import torch
 from nas.utils import utils
+from nas.networks.mbv3 import MobileNetV3
 from nas.networks.my_network import MyNetwork
 from nas.networks.my_layer import MyConv2D, MyResBlock, MyLinearLayer
 from nas.efficiency_predictor.predictor import Predictor
@@ -138,10 +141,31 @@ class LatencyPredictor(Predictor):
 
         return configs
 
-    def predict_efficiency(self, spec: dict):
+    def predict_efficiency_from_spec(self, spec: dict):
         configs = self.get_config_from_spec(spec)
         total_stats = 0
         for config in configs:
             total_stats += self.measure_single_layer_latency(config)
+
+        return total_stats
+
+    def predict_efficiency_from_net(
+            self,
+            net: MobileNetV3,
+            input_size: int,
+            warmup_steps=10,
+            measure_steps=50):
+        net = net.to(device='cpu')
+        net.eval()
+
+        inputs = torch.randn((1, 3, input_size, input_size), device='cpu')
+        for _ in range(warmup_steps):
+            net(inputs)
+
+        st = time.time()
+        for _ in range(measure_steps):
+            net(inputs)
+        ed = time.time()
+        total_stats = (ed - st) / measure_steps
 
         return total_stats

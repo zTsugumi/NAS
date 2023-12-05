@@ -29,7 +29,7 @@ class MobileNetV3(MyNetwork):
         x = self.final_expand_layer(x)
         x = self.global_avg_pool(x)
         x = self.feature_mix_layer(x)
-        x = x.view(x.size[0], -1)
+        x = x.view(x.shape[0], -1)
         x = self.classifier(x)
 
         return x

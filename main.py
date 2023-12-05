@@ -9,6 +9,7 @@ if __name__ == '__main__':
     finder = RandomSearch(
         efficiency_constraint=25,  # ms
         efficiency_predictor=latency_predictor)
-    best_config, _ = finder.run_search()
+    # best_config, _ = finder.run_search()
 
-    net = MobileNetV3.build_from_spec(best_config, 1000)
+    # net = MobileNetV3.build_from_spec(best_config, 1000)
+    finder.run_compare()
