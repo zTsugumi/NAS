@@ -38,7 +38,7 @@ class RandomSearch:
             net = MobileNetV3.build_from_spec(spec, 1000)
 
             efficiency['Est'].append(
-                round(self.efficiency_predictor.predict_efficiency_from_spec(spec), 2))
+                round(self.efficiency_predictor.predict_efficiency_from_spec(spec), 2)) / 100
             efficiency['Truth'].append(
                 round(self.efficiency_predictor.predict_efficiency_from_net(
                     net, spec.get('r', [224])[0]), 2))
