@@ -38,10 +38,13 @@ class RandomSearch:
             net = MobileNetV3.build_from_spec(spec, 1000)
 
             efficiency['Est'].append(
-                round(self.efficiency_predictor.predict_efficiency_from_spec(spec), 2)) / 100
+                round(self.efficiency_predictor.predict_efficiency_from_spec(spec), 2) / 100)
             efficiency['Truth'].append(
                 round(self.efficiency_predictor.predict_efficiency_from_net(
                     net, spec.get('r', [224])[0]), 2))
+
+            print(
+                f'Est: {efficiency["Est"][-1]:.2f}\tTruth: {efficiency["Truth"][-1]:.2f}')
 
         import matplotlib.pyplot as plt
         import numpy as np
@@ -61,7 +64,6 @@ class RandomSearch:
         ax.set_title('Latency Comparison')
         ax.set_xticks(x + width, x)
         ax.legend(loc='upper left', ncols=3)
-        ax.set_ylim(0, 80)
 
         plt.show()
         fig.savefig('data/comparison.png')
