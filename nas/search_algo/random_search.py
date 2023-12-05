@@ -26,16 +26,41 @@ class RandomSearch:
                 return spec, efficiency
 
     def run_compare(self):
-        for _ in range(10):
+        efficiency = {
+            'Est': [],
+            'Truth': []
+        }
+        x = []
+
+        for i in range(10):
+            x.append(i)
             spec = self.arch_manager.random_spec()
             net = MobileNetV3.build_from_spec(spec, 1000)
 
-            efficiency_spec = self.efficiency_predictor.predict_efficiency_from_spec(
-                spec)
-            efficiency_net = self.efficiency_predictor.predict_efficiency_from_net(
-                net, spec.get('r', [224])[0]
-            )
-            diff = efficiency_spec / efficiency_net * 100
+            efficiency['Est'].append(
+                round(self.efficiency_predictor.predict_efficiency_from_spec(spec)), 2)
+            efficiency['Truth'].append(
+                round(self.efficiency_predictor.predict_efficiency_from_net(
+                    net, spec.get('r', [224])[0])), 2)
 
-            print(
-                f'Est: {efficiency_spec:.4f}\tTruth: {efficiency_net:.4f}\tDiff: {diff:.2f}%')
+        import matplotlib.pyplot as plt
+        import numpy as np
+
+        x = np.arange(len(x))  # the label locations
+        width = 0.25  # the width of the bars
+        multiplier = 0
+
+        fig, ax = plt.subplots(layout='constrained')
+        for attribute, measurement in efficiency.items():
+            offset = width * multiplier
+            rects = ax.bar(x + offset, measurement, width, label=attribute)
+            ax.bar_label(rects, padding=3)
+            multiplier += 1
+
+        ax.set_ylabel('Latency (ms)')
+        ax.set_title('Latency Comparison')
+        ax.set_xticks(x + width, x)
+        ax.legend(loc='upper left', ncols=3)
+        ax.set_ylim(0, 80)
+
+        plt.show()
