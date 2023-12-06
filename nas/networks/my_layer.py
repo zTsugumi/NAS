@@ -178,28 +178,23 @@ class MyConv2D(My2DLayer):
         else:
             kernel_size = self.kernel_size
 
-        if self.groups == 1:
-            if self.dilation > 1:
-                conv_str = '%dx%d_DilatedConv' % (
-                    kernel_size[0], kernel_size[1])
-            else:
-                conv_str = '%dx%d_Conv' % (kernel_size[0], kernel_size[1])
-        else:
-            if self.dilation > 1:
-                conv_str = '%dx%d_DilatedGroupConv' % (
-                    kernel_size[0], kernel_size[1])
-            else:
-                conv_str = '%dx%d_GroupConv' % (kernel_size[0], kernel_size[1])
-
-        conv_str += '_O%d' % self.out_channels
-
-        conv_str += '_' + self.act_func.upper()
+        conv_str = 'Conv:\n'
+        conv_str += f'\tgroup: {self.groups}\n'
+        conv_str += f'\tdilation: {self.dilation}\n'
+        conv_str += f'\tin: {self.in_channels}\n'
+        conv_str += f'\tout: {self.out_channels}\n'
+        conv_str += f'\tk: {kernel_size[0]}x{kernel_size[1]}\n'
+        conv_str += f'\ts: {self.stride}\n'
+        conv_str += f'\tdropout: {self.dropout_rate}\n'
+        conv_str += f'\top-order: {self.ops_order}\n'
 
         if self.use_bn:
             if isinstance(self.bn, nn.GroupNorm):
-                conv_str += '_GN%d' % self.bn.num_groups
+                conv_str += f'\tnorm: GN{self.bn.num_groups}\n'
             elif isinstance(self.bn, nn.BatchNorm2d):
-                conv_str += '_BN'
+                conv_str += '\tnorm: BN\n'
+
+        conv_str += '\tact: ' + self.act_func.upper()
 
         return conv_str
 
@@ -229,7 +224,7 @@ class MyGlobalAvgPool2D(nn.Module):
         return x.mean(3, keepdim=self.keep_dim).mean(2, keepdim=self.keep_dim)
 
     def __repr__(self):
-        return "MyGlobalAvgPool2D(keep_dim=%s)" % self.keep_dim
+        return 'MyGlobalAvgPool2D(keep_dim=%s)' % self.keep_dim
 
 
 class ZeroLayer(MyModule):
@@ -265,7 +260,7 @@ class MyLinearLayer(MyModule):
         use_bn=False,
         act_func=None,
         dropout_rate=0,
-        ops_order="weight_bn_act",
+        ops_order='weight_bn_act',
     ):
         super(MyLinearLayer, self).__init__()
 
@@ -278,53 +273,53 @@ class MyLinearLayer(MyModule):
         self.dropout_rate = dropout_rate
         self.ops_order = ops_order
 
-        """ modules """
+        ''' modules '''
         modules = {}
         # batch norm
         if self.use_bn:
             if self.bn_before_weight:
-                modules["bn"] = nn.BatchNorm1d(in_features)
+                modules['bn'] = nn.BatchNorm1d(in_features)
             else:
-                modules["bn"] = nn.BatchNorm1d(out_features)
+                modules['bn'] = nn.BatchNorm1d(out_features)
         else:
-            modules["bn"] = None
+            modules['bn'] = None
         # activation
-        modules["act"] = utils.build_activation(
-            self.act_func, self.ops_list[0] != "act")
+        modules['act'] = utils.build_activation(
+            self.act_func, self.ops_list[0] != 'act')
         # dropout
         if self.dropout_rate > 0:
-            modules["dropout"] = nn.Dropout(self.dropout_rate, inplace=True)
+            modules['dropout'] = nn.Dropout(self.dropout_rate, inplace=True)
         else:
-            modules["dropout"] = None
+            modules['dropout'] = None
         # linear
-        modules["weight"] = {
-            "linear": nn.Linear(self.in_features, self.out_features, self.bias)
+        modules['weight'] = {
+            'linear': nn.Linear(self.in_features, self.out_features, self.bias)
         }
 
         # add modules
         for op in self.ops_list:
             if modules[op] is None:
                 continue
-            elif op == "weight":
-                if modules["dropout"] is not None:
-                    self.add_module("dropout", modules["dropout"])
-                for key in modules["weight"]:
-                    self.add_module(key, modules["weight"][key])
+            elif op == 'weight':
+                if modules['dropout'] is not None:
+                    self.add_module('dropout', modules['dropout'])
+                for key in modules['weight']:
+                    self.add_module(key, modules['weight'][key])
             else:
                 self.add_module(op, modules[op])
 
     @property
     def ops_list(self):
-        return self.ops_order.split("_")
+        return self.ops_order.split('_')
 
     @property
     def bn_before_weight(self):
         for op in self.ops_list:
-            if op == "bn":
+            if op == 'bn':
                 return True
-            elif op == "weight":
+            elif op == 'weight':
                 return False
-        raise ValueError("Invalid ops_order: %s" % self.ops_order)
+        raise ValueError('Invalid ops_order: %s' % self.ops_order)
 
     def forward(self, x):
         for module in self._modules.values():
@@ -333,19 +328,19 @@ class MyLinearLayer(MyModule):
 
     @property
     def module_str(self):
-        return "%dx%d_Linear" % (self.in_features, self.out_features)
+        return f'Linear:\n\tin: {self.in_features}\n\tout: {self.out_features}'
 
     @property
     def config(self):
         return {
-            "name": MyLinearLayer.__name__,
-            "in_features": self.in_features,
-            "out_features": self.out_features,
-            "bias": self.bias,
-            "use_bn": self.use_bn,
-            "act_func": self.act_func,
-            "dropout_rate": self.dropout_rate,
-            "ops_order": self.ops_order,
+            'name': MyLinearLayer.__name__,
+            'in_features': self.in_features,
+            'out_features': self.out_features,
+            'bias': self.bias,
+            'use_bn': self.use_bn,
+            'act_func': self.act_func,
+            'dropout_rate': self.dropout_rate,
+            'ops_order': self.ops_order,
         }
 
     @staticmethod
@@ -362,7 +357,7 @@ class MBConvLayer(MyModule):
         stride=1,
         expand_ratio=6,
         mid_channels=None,
-        act_func="relu6",
+        act_func='relu6',
         use_se=False,
         groups=None,
     ):
@@ -391,13 +386,13 @@ class MBConvLayer(MyModule):
                 OrderedDict(
                     [
                         (
-                            "conv",
+                            'conv',
                             nn.Conv2d(
                                 self.in_channels, feature_dim, 1, 1, 0, bias=False
                             ),
                         ),
-                        ("bn", nn.BatchNorm2d(feature_dim)),
-                        ("act", utils.build_activation(
+                        ('bn', nn.BatchNorm2d(feature_dim)),
+                        ('act', utils.build_activation(
                             self.act_func, inplace=True)),
                     ]
                 )
@@ -411,7 +406,7 @@ class MBConvLayer(MyModule):
         )
         depth_conv_modules = [
             (
-                "conv",
+                'conv',
                 nn.Conv2d(
                     feature_dim,
                     feature_dim,
@@ -422,8 +417,8 @@ class MBConvLayer(MyModule):
                     bias=False,
                 ),
             ),
-            ("bn", nn.BatchNorm2d(feature_dim)),
-            ("act", utils.build_activation(self.act_func, inplace=True)),
+            ('bn', nn.BatchNorm2d(feature_dim)),
+            ('act', utils.build_activation(self.act_func, inplace=True)),
         ]
 
         self.depth_conv = nn.Sequential(OrderedDict(depth_conv_modules))
@@ -431,8 +426,8 @@ class MBConvLayer(MyModule):
         self.point_linear = nn.Sequential(
             OrderedDict(
                 [
-                    ("conv", nn.Conv2d(feature_dim, out_channels, 1, 1, 0, bias=False)),
-                    ("bn", nn.BatchNorm2d(out_channels)),
+                    ('conv', nn.Conv2d(feature_dim, out_channels, 1, 1, 0, bias=False)),
+                    ('bn', nn.BatchNorm2d(out_channels)),
                 ]
             )
         )
@@ -448,39 +443,43 @@ class MBConvLayer(MyModule):
     def module_str(self):
         if self.mid_channels is None:
             expand_ratio = self.expand_ratio
+            feature_dim = round(self.in_channels * self.expand_ratio)
         else:
             expand_ratio = self.mid_channels // self.in_channels
-        layer_str = "%dx%d_MBConv%d_%s" % (
-            self.kernel_size,
-            self.kernel_size,
-            expand_ratio,
-            self.act_func.upper(),
+            feature_dim = self.mid_channels
+
+        groups = (
+            feature_dim if self.groups is None
+            else utils.min_divisible_value(feature_dim, self.groups)
         )
-        if self.use_se:
-            layer_str = "SE_" + layer_str
-        layer_str += "_O%d" % self.out_channels
-        if self.groups is not None:
-            layer_str += "_G%d" % self.groups
+
+        layer_str = f'MBConv:\n'
+        layer_str += f'\t\tgroup: {groups}\n'
+        layer_str += f'\t\tin: {self.in_channels}\n\t\tout: {self.out_channels}\n'
+        layer_str += f'\t\tk: {self.kernel_size}x{self.kernel_size}\n'
+        layer_str += f'\t\ts: {self.stride}\n'
+        layer_str += f'\t\te: {expand_ratio}\n'
         if isinstance(self.point_linear.bn, nn.GroupNorm):
-            layer_str += "_GN%d" % self.point_linear.bn.num_groups
+            layer_str += f'\t\tnorm: GN{self.point_linear.bn.num_groups}\n'
         elif isinstance(self.point_linear.bn, nn.BatchNorm2d):
-            layer_str += "_BN"
+            layer_str += '\t\tnorm: BN\n'
+        layer_str += '\t\tact: ' + self.act_func.upper()
 
         return layer_str
 
     @property
     def config(self):
         return {
-            "name": MBConvLayer.__name__,
-            "in_channels": self.in_channels,
-            "out_channels": self.out_channels,
-            "kernel_size": self.kernel_size,
-            "stride": self.stride,
-            "expand_ratio": self.expand_ratio,
-            "mid_channels": self.mid_channels,
-            "act_func": self.act_func,
-            "use_se": self.use_se,
-            "groups": self.groups,
+            'name': MBConvLayer.__name__,
+            'in_channels': self.in_channels,
+            'out_channels': self.out_channels,
+            'kernel_size': self.kernel_size,
+            'stride': self.stride,
+            'expand_ratio': self.expand_ratio,
+            'mid_channels': self.mid_channels,
+            'act_func': self.act_func,
+            'use_se': self.use_se,
+            'groups': self.groups,
         }
 
     @staticmethod
@@ -496,7 +495,7 @@ class IdentityLayer(My2DLayer):
         use_bn=False,
         act_func=None,
         dropout_rate=0,
-        ops_order="weight_bn_act",
+        ops_order='weight_bn_act',
     ):
         super(IdentityLayer, self).__init__(
             in_channels, out_channels, use_bn, act_func, dropout_rate, ops_order
@@ -507,12 +506,12 @@ class IdentityLayer(My2DLayer):
 
     @property
     def module_str(self):
-        return "Identity"
+        return 'Identity'
 
     @property
     def config(self):
         return {
-            "name": IdentityLayer.__name__,
+            'name': IdentityLayer.__name__,
             **super(IdentityLayer, self).config,
         }
 
@@ -542,10 +541,10 @@ class MyResBlock(MyModule):
 
     @property
     def module_str(self):
-        return '(%s, %s)' % (
-            self.conv.module_str if self.conv is not None else None,
-            self.shortcut.module_str if self.shortcut is not None else None,
-        )
+        layer_str = f'ResNetBlock:\n'
+        layer_str += f'\t{self.conv.module_str if self.conv is not None else None}\n'
+        layer_str += f'\tShortcut: {self.shortcut.module_str if self.shortcut is not None else None}'
+        return layer_str
 
     @property
     def config(self):

@@ -1,6 +1,4 @@
-from typing import Union
 from nas.search_algo.arch_manager import ArchManager
-from nas.efficiency_predictor.flops import FLOPsPredictor
 from nas.efficiency_predictor.latency import LatencyPredictor
 from nas.networks.mbv3 import MobileNetV3
 
@@ -9,7 +7,7 @@ class RandomSearch:
     def __init__(
         self,
         efficiency_constraint: float,
-        efficiency_predictor: Union[FLOPsPredictor, LatencyPredictor],
+        efficiency_predictor: LatencyPredictor,
     ):
         self.efficiency_constraint = efficiency_constraint
         self.efficiency_predictor = efficiency_predictor
@@ -21,7 +19,8 @@ class RandomSearch:
     def run_search(self):
         while True:
             spec = self.arch_manager.random_spec()
-            efficiency = self.efficiency_predictor.predict_efficiency(spec)
+            efficiency = self.efficiency_predictor.predict_efficiency_from_spec(
+                spec)
             if efficiency <= self.efficiency_constraint:
                 return spec, efficiency
 
