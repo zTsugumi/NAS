@@ -6,22 +6,18 @@ from nas.networks.mbv3 import MobileNetV3
 class RandomSearch:
     def __init__(
         self,
-        efficiency_constraint: float,
         efficiency_predictor: LatencyPredictor,
+        arch_manager: ArchManager
     ):
-        self.efficiency_constraint = efficiency_constraint
         self.efficiency_predictor = efficiency_predictor
-        self.arch_manager = ArchManager()
+        self.arch_manager = arch_manager
 
-    def set_efficiency_constraint(self, new_constraint):
-        self.efficiency_constraint = new_constraint
-
-    def run_search(self):
+    def run_search(self, efficiency_constraint: float):
         while True:
             spec = self.arch_manager.random_spec()
             efficiency = self.efficiency_predictor.predict_efficiency_from_spec(
                 spec)
-            if efficiency <= self.efficiency_constraint:
+            if efficiency <= efficiency_constraint:
                 return spec, efficiency
 
     def run_compare(self, plot=False):

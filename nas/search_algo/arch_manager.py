@@ -21,11 +21,21 @@ class ArchManager:
             e.append(random.choice(self.expand_ratios))
             ks.append(random.choice(self.kernel_sizes))
 
-        sample = {
+        spec = {
             'ks': ks,
             'e': e,
             'd': d,
             'r': [random.choice(self.resolutions)]
         }
 
-        return sample
+        return spec
+
+    def mutate_spec(self, spec, mutate_prob):
+        for i in range(self.n_blocks):
+            if random.random() < mutate_prob:
+                spec['ks'][i] = random.choice(self.kernel_sizes)
+                spec['e'][i] = random.choice(self.expand_ratios)
+
+        for i in range(self.n_stages):
+            if random.random() < mutate_prob:
+                spec['d'][i] = random.choice(self.depths)

@@ -4,10 +4,9 @@ from nas.utils import utils
 from nas.networks.mbv3 import MobileNetV3
 from nas.networks.my_network import MyNetwork
 from nas.networks.my_layer import MyConv2D, MyResBlock, MyLinearLayer
-from nas.efficiency_predictor.predictor import Predictor
 
 
-class LatencyPredictor(Predictor):
+class LatencyPredictor:
     def measure_latency_by_op(self, op_type, config, with_relu=True):
         latency = 0
 
